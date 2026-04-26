@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>History</title>
+</head>
+<body>
+
+<h2>Your Summary History</h2>
+
+{% for item in data %}
+<div style="border:1px solid black; padding:10px; margin:10px;">
+    
+    <small>
+        {{ item.created_at.strftime('%d %b %Y, %I:%M %p') }}
+    </small>
+    
+    <br>
+    <strong>{{ item.input_type }}</strong>
+    
+    <p>{{ item.summary }}</p>
+
+    <!-- 🗑 DELETE BUTTON -->
+    <a href="/delete/{{ item.id }}" class="btn btn-danger btn-sm">
+        🗑 Delete
+    </a>
+    
+</div>
+{% endfor %}
+<br>
+<a href="/app">⬅ Back to App</a>
+
+</body>
+</html>

@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart Summarizer</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+
+html, body {
+    height: 100%;
+}
+
+.row {
+    min-height: 100vh;
+}
+body {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    color: white;
+}
+
+/* Sidebar */
+.sidebar {
+    height: 100vh;
+    background: rgba(17, 24, 39, 0.7);
+    backdrop-filter: blur(12px);
+    padding: 15px;
+    border-right: 1px solid rgba(255,255,255,0.1);
+}
+
+/* History */
+.history-item {
+    padding: 10px;
+    border-radius: 10px;
+    margin-bottom: 8px;
+     transition: all 0.3s ease;
+    overflow: hidden;
+}
+.history-item a {
+    text-decoration: none;
+    color: white;
+    font-size: 14px;
+}
+.history-item:hover {
+    background: rgba(255,255,255,0.1);
+}
+.history-item.active {
+    background: rgba(255,255,255,0.2);
+}
+/* Smooth delete animation */
+.history-item.removing {
+    opacity: 0;
+    transform: translateX(-30px);
+    height: 0;
+    margin: 0;
+    padding: 0;
+}
+
+/* Main */
+.main {
+    padding: 30px;
+}
+
+/* Summary */
+.summary-box {
+    background: rgba(255,255,255,0.08);
+    backdrop-filter: blur(12px);
+    padding: 20px;
+    border-radius: 12px;
+    padding-top: 55px; /* 👈 SPACE FOR COPY BUTTON */
+}
+
+/* Button */
+.btn-success {
+    background: linear-gradient(45deg, #6366f1, #ec4899);
+    border: none;
+}
+
+/* Toggle Switch */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 26px;
+}
+
+.switch input {
+    display: none;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    background-color: #ccc;
+    border-radius: 34px;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    transition: 0.4s;
+}
+
+.slider:before {
+    content: "";
+    position: absolute;
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    border-radius: 50%;
+    transition: 0.4s;
+}
+
+/* ON state */
+input:checked + .slider {
+    background: linear-gradient(45deg, #6366f1, #ec4899);
+}
+
+input:checked + .slider:before {
+    transform: translateX(24px);
+}
+
+.dark-theme {
+    background: #020617;
+    /*.btn-success: white;*/
+    min-height: 100vh;
+}
+
+.glow-theme {
+    min-height: 100vh;
+    background-color: #020617;
+    background-image:
+        radial-gradient(circle at top left, #6366f1, transparent 40%),
+        radial-gradient(circle at bottom right, #ec4899, transparent 40%);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+
+.summary-container {
+    position: relative;
+}
+
+/* Copy Button */
+.copy-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+     z-index: 999; 
+
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+   /* background: rgba(0,0,0,0.6);*/
+    background: rgb(164, 135, 160) !important;
+    color: white;
+    border: 1px solid rgba(255,255,255,0.2);
+
+    padding: 6px 10px;
+    border-radius: 8px;
+
+    font-size: 13px;
+    cursor: pointer;
+
+    backdrop-filter: blur(10px);
+    transition: 0.2s;
+}
+
+.copy-btn:hover {
+    background: rgba(255,255,255,0.2);
+    transform: scale(1.05);
+}
+
+/* Icon */
+.copy-icon {
+    font-size: 14px;
+}
+
+.delete-btn {
+    background: transparent;
+    border: none;
+    color: #ff6b6b;
+    font-size: 16px;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: 0.2s;
+}
+
+.delete-btn:hover {
+    opacity: 1;
+    transform: scale(1.2);
+}
+.delete-btn {
+    position: relative;
+}
+
+.delete-btn::after {
+    content: "Delete";
+    position: absolute;
+    top: -25px;
+    right: 0;
+    font-size: 11px;
+    background: rgba(0,0,0,0.7);
+    padding: 2px 6px;
+    border-radius: 4px;
+    opacity: 0;
+    transition: 0.2s;
+}
+
+.delete-btn:hover::after {
+    opacity: 1;
+}
+/* Toast */
+.toast-box {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 10px 15px;
+    border-radius: 8px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: 0.3s;
+    z-index: 999;
+}
+.toast-box.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Shared button style (History + Logout) */
+.history-btn,
+.logout-btn {
+    background: linear-gradient(45deg, #6366f1, #ec4899);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 8px;
+    transition: 0.3s;
+}
+
+/* Hover effect */
+.history-btn:hover,
+.logout-btn:hover {
+    transform: scale(1.03);
+    box-shadow: 0 0 12px rgba(236,72,153,0.6);
+}
+
+
+.profile-box {
+    background: rgba(255,255,255,0.08);
+    padding: 15px;
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* Avatar circle */
+.avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(45deg, #6366f1, #ec4899);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: bold;
+    color: white;
+}
+/* Subtext */
+.profile-box small {
+    opacity: 0.7;
+}
+.profile-box:hover {
+    background: rgba(255,255,255,0.1);
+    transform: scale(1.02);
+    transition: 0.3s;
+    cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container-fluid">
+<div class="row">
+
+
+<!-- ✅ SIDEBAR -->
+<div class="col-md-3 sidebar">
+
+    <!-- 🌗 Theme Switch -->
+    <div class="d-flex align-items-center mb-3">
+        <label class="switch">
+            <input type="checkbox" id="themeToggle">
+            <span class="slider"></span>
+        </label>
+        <span class="ms-2">🌗 Theme</span>
+    </div>
+    <!-- 👤 PROFILE SECTION -->
+<div class="profile-box d-flex align-items-center mb-3">
+
+    <!-- Avatar -->
+    <div class="avatar me-3">
+      {% if current_user.is_authenticated %}
+    {{ current_user.username[0] | upper }}
+{% else %}
+    G
+{% endif %}  
+    </div>
+
+    <!-- User info -->
+    <div>
+        <h6 class="mb-0">{{ current_user.username }}</h6>
+        <small class="text-muted">{{ current_user.email }}</small>
+    </div>
+
+</div>
+  
+
+    <!-- 📜 History Button -->
+    <button onclick="toggleHistory()" class="btn history-btn w-100 mb-2">
+        📜 Show History
+    </button>
+
+    <!-- 📂 History List -->
+  <div id="historyBox" style="display:none;">
+    {% if current_user.is_authenticated %}
+        {% for item in history_data %}
+        <div class="history-item d-flex justify-content-between align-items-center {% if active_id == item.id %}active{% endif %}" id="history-{{ item.id }}">
+            
+            <!-- Load -->
+            <a href="/load/{{ item.id }}" style="flex:1;">
+                {{ item.summary[:50] }}...
+            </a>
+
+            <!-- 🗑 Delete -->
+            <button class="delete-btn" onclick="deleteItem({{ item.id }})">
+                🗑
+            </button>
+
+        </div>
+        {% endfor %}
+
+        <!-- 🧹 Clear all -->
+        <button onclick="clearAll()" class="btn btn-danger w-100 mt-2">
+            🧹 Clear All History
+        </button>
+
+    {% else %}
+        <p>Login to save history</p>
+    {% endif %}
+</div>  
+
+    <!-- 🚪 Logout -->
+<div class="d-flex justify-content-center mt-4">
+    <a href="/logout" class="btn logout-btn">Logout</a>
+</div>
+
+
+</div>
+
+<!-- ✅ MAIN CONTENT -->
+<div class="col-md-9 main">
+
+<h2 class="text-center mb-4">✨ Smart Summarizer</h2>
+
+<form method="POST" enctype="multipart/form-data">
+
+<div class="mb-3">
+<input type="radio" name="type" value="pdf" checked> PDF
+<input type="radio" name="type" value="url"> URL
+<input type="radio" name="type" value="image"> Image
+</div>
+
+<div class="mb-3" id="fileInput">
+<input type="file" class="form-control" name="file">
+</div>
+
+<div class="mb-3" id="urlInput" style="display:none;">
+<input type="text" class="form-control" name="url" placeholder="Enter URL">
+</div>
+
+<div class="mb-3">
+<select class="form-select" name="format">
+<option value="detailed">Standard</option>
+<option value="bullet">Bullet</option>
+</select>
+</div>
+
+<button class="btn btn-success w-100">🚀 Generate</button>
+</form>
+
+{% if summary %}
+<hr>
+<h4 class="mb-3">📝 Summary</h4>
+<div class="summary-container">
+
+    <!-- Copy Button -->
+    <button class="copy-btn" onclick="copyText()">
+        <span class="copy-icon">📋</span>
+        <span class="copy-text">Copy</span>
+    </button>
+
+    <div class="summary-box">
+        {% if format_type == "bullet" %}
+        <ul>
+        {% for point in summary.split('.') %}
+        {% if point.strip() %}
+        <li>{{ point.strip() }}</li>
+        {% endif %}
+        {% endfor %}
+        </ul>
+        {% else %}
+        {{ summary }}
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- Voice -->
+<div class="mt-3">
+<select id="voiceType" class="form-select">
+<option value="female">Female (India)</option>
+<option value="male">Male (India)</option>
+</select>
+
+<button onclick="playAudio()" class="btn btn-warning mt-2 w-100">Play</button>
+<audio id="audioPlayer" controls style="width:100%; display:none;"></audio>
+</div>
+
+<button onclick="downloadPDF()" class="btn btn-success mt-2 w-100">
+    📥 Download PDF
+</button>
+
+
+<!--<button onclick="copyText()" class="btn btn-secondary mt-2 w-100">Copy</button>-->
+
+{% endif %}
+
+</div>
+
+</div>
+</div>
+
+   
+<script>
+const summaryText = {{ summary | tojson }};
+function toggleHistory() {
+    const box = document.getElementById("historyBox");
+    box.style.display = (box.style.display === "none") ? "block" : "none";
+}
+
+// ✅ Theme logic (OUTSIDE function)
+document.addEventListener("DOMContentLoaded", function () {
+
+    const toggle = document.getElementById("themeToggle");
+
+    toggle.addEventListener("change", function () {
+        if (this.checked) {
+            document.body.classList.remove("dark-theme");
+            document.body.classList.add("glow-theme");
+            localStorage.setItem("theme", "glow");
+        } else {
+            document.body.classList.remove("glow-theme");
+            document.body.classList.add("dark-theme");
+            localStorage.setItem("theme", "dark");
+        }
+    });
+
+    const saved = localStorage.getItem("theme") || "glow";
+    document.body.classList.add(saved + "-theme");
+
+    if (saved === "glow") {
+        toggle.checked = true;
+    }
+
+});
+
+
+function copyText() {
+    if (!summaryText) return;
+
+    navigator.clipboard.writeText(summaryText);
+
+    const btn = document.querySelector(".copy-btn");
+    if (!btn) return;
+
+    const text = btn.querySelector(".copy-text");
+    if (!text) return;
+
+    text.innerText = "Copied ✓";
+
+    setTimeout(() => {
+        text.innerText = "Copy";
+    }, 1500);
+}
+function playAudio()
+ {
+    const summary = summaryText;
+    const voice = document.getElementById("voiceType").value;
+
+    if (!summary.trim()) {
+        alert("No summary available!");
+        return;
+    }
+
+    fetch('/play_audio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'summary=' + encodeURIComponent(summary) + '&voice=' + voice
+    })
+    .then(res => res.json())
+    .then(data => {
+        const audio = document.getElementById("audioPlayer");
+        audio.src = data.path + "?t=" + new Date().getTime();
+        audio.style.display = "block";
+        audio.load();
+        audio.play();
+    })
+    .catch(() => alert("Audio failed!"));
+}
+
+function downloadPDF() {
+    if (!summaryText) {
+        alert("No summary available!");
+        return;
+    }
+
+    const formData = new URLSearchParams();
+    formData.append("summary", summaryText);
+
+    fetch('/download_pdf', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.blob())
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "summary.pdf";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    })
+    .catch(() => alert("Download failed!"));
+}
+
+function showToast(msg) {
+    const toast = document.getElementById("toast");
+    toast.innerText = msg;
+    toast.classList.add("show");
+
+    setTimeout(() => {
+        toast.classList.remove("show");
+    }, 2000);
+}
+
+//  DELETE SINGLE (AJAX)
+function deleteItem(id) {
+    fetch(`/delete/${id}`, {
+        method: "POST"
+    })
+    .then(res => {
+        if (!res.ok) throw new Error();
+
+        const el = document.getElementById("history-" + id);
+
+        if (el) {
+            el.style.height = el.offsetHeight + "px";
+
+            setTimeout(() => {
+                el.classList.add("removing");
+            }, 10);
+
+            setTimeout(() => {
+                el.remove();
+            }, 300);
+        }
+
+        showToast("Deleted ✔");
+    })
+    .catch(() => showToast("Delete failed ❌"));
+}
+
+//  DELETE ALL (AJAX)
+function clearAll() {
+    fetch('/delete_all', {
+        method: "POST"
+    })
+    .then(res => {
+        if (!res.ok) throw new Error();
+
+        const items = document.querySelectorAll(".history-item");
+
+        items.forEach((el, index) => {
+            setTimeout(() => {
+                el.classList.add("removing");
+                setTimeout(() => el.remove(), 300);
+            }, index * 80);
+        });
+
+        showToast("All history cleared ✔");
+    })
+    .catch(() => showToast("Failed ❌"));
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const radios = document.querySelectorAll('input[name="type"]');
+    const fileInput = document.getElementById("fileInput");
+    const urlInput = document.getElementById("urlInput");
+
+    function toggleInputs() {
+        const selected = document.querySelector('input[name="type"]:checked').value;
+
+        if (selected === "url") {
+            fileInput.style.display = "none";
+            urlInput.style.display = "block";
+        } else {
+            fileInput.style.display = "block";
+            urlInput.style.display = "none";
+        }
+    }
+
+    // Run on load
+    toggleInputs();
+
+    // Run when user changes option
+    radios.forEach(radio => {
+        radio.addEventListener("change", toggleInputs);
+    });
+
+});
+
+function toggleHistory() {
+    const box = document.getElementById("historyBox");
+    const btn = document.querySelector(".history-btn");
+
+    if (box.style.display === "none" || box.style.display === "") {
+        box.style.display = "block";
+        btn.innerText = "📜 Hide History";
+    } else {
+        box.style.display = "none";
+        btn.innerText = "📜 Show History";
+    }
+}
+
+</script>
+<div id="toast" class="toast-box">Deleted successfully ✔</div>
+</body>
+</html>
